@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Новая заметка</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #ffffff;
+      color: #111111;
+    }
+
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin: 0 0 16px;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    select,
+    input,
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      border: 1px solid #cccccc;
+      border-radius: 10px;
+      font-size: 15px;
+    }
+
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: #666666;
+      margin-top: 4px;
+    }
+
+    .multi {
+      min-height: 120px;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #111111;
+      color: white;
+    }
+
+    .preview {
+      margin-top: 16px;
+      padding: 12px;
+      border: 1px solid #dddddd;
+      border-radius: 12px;
+      background: #f7f7f7;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Новая заметка</h1>
+
+    <div class="field">
+      <label for="type">Тип</label>
+      <select id="type">
+        <option value="идея">идея</option>
+        <option value="сцена">сцена</option>
+        <option value="персонаж">персонаж</option>
+        <option value="лор">лор</option>
+        <option value="диалог">диалог</option>
+        <option value="задача">задача</option>
+        <option value="вопрос">вопрос</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="status">Статус</label>
+      <select id="status">
+        <option value="новое">новое</option>
+        <option value="разобрано">разобрано</option>
+        <option value="в работу">в работу</option>
+        <option value="внесено" selected>внесено</option>
+        <option value="отложено">отложено</option>
+        <option value="отброшено">отброшено</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="block">Блок</label>
+      <select id="block">
+        <option value="">— не выбран —</option>
+        <option value="Лор">Лор</option>
+        <option value="Политика">Политика</option>
+        <option value="Сцены">Сцены</option>
+      </select>
+      <div class="hint">Пока это тестовый список.</div>
+    </div>
+
+    <div class="field">
+      <label for="newBlock">Новый блок</label>
+      <input id="newBlock" type="text" placeholder="Если нужного блока нет — впиши новый" />
+    </div>
+
+    <div class="field">
+      <label for="focuses">Фокус</label>
+      <select id="focuses" class="multi" multiple>
+        <option value="Лор: Империя">Лор: Империя</option>
+        <option value="Лор: Культ">Лор: Культ</option>
+        <option value="Политика: Толпа">Политика: Толпа</option>
+      </select>
+      <div class="hint">Можно выбрать несколько.</div>
+    </div>
+
+    <div class="field">
+      <label for="newFocuses">Новые фокусы</label>
+      <input id="newFocuses" type="text" placeholder="Через запятую, если нужных нет" />
+    </div>
+
+    <div class="field">
+      <label for="characters">Персонажи</label>
+      <select id="characters" class="multi" multiple>
+        <option value="Клод">Клод</option>
+        <option value="Невеста">Невеста</option>
+        <option value="Наемница">Наемница</option>
+      </select>
+      <div class="hint">Можно выбрать несколько.</div>
+    </div>
+
+    <div class="field">
+      <label for="newCharacters">Новые персонажи</label>
+      <input id="newCharacters" type="text" placeholder="Через запятую, если нужных нет" />
+    </div>
+
+    <div class="field">
+      <label for="bodyText">Текст заметки</label>
+      <textarea id="bodyText" placeholder="Напиши заметку здесь"></textarea>
+    </div>
+
+    <div class="field">
+      <button id="showDataBtn" type="button">Показать, что отправится</button>
+    </div>
+
+    <div id="preview" class="preview">Здесь появится итоговый JSON.</div>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp
+    tg.ready()
+    tg.expand()
+
+    function getMultiValues(selectEl) {
+      return Array.from(selectEl.selectedOptions).map(option => option.value).filter(Boolean)
+    }
+
+    function splitCommaList(value) {
+      return String(value || '')
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean)
+    }
+
+    document.getElementById('showDataBtn').addEventListener('click', () => {
+      const payload = {
+        source: 'telegram-miniapp',
+        type: document.getElementById('type').value,
+        status: document.getElementById('status').value,
+        block: document.getElementById('block').value,
+        newBlock: document.getElementById('newBlock').value.trim(),
+        focuses: getMultiValues(document.getElementById('focuses')),
+        newFocuses: splitCommaList(document.getElementById('newFocuses').value),
+        characters: getMultiValues(document.getElementById('characters')),
+        newCharacters: splitCommaList(document.getElementById('newCharacters').value),
+        bodyText: document.getElementById('bodyText').value.trim()
+      }
+
+      document.getElementById('preview').textContent = JSON.stringify(payload, null, 2)
+    })
+  </script>
+</body>
+</html>
