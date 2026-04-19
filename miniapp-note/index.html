@@ -43,27 +43,23 @@
       border: 1px solid #cccccc;
       border-radius: 10px;
       font-size: 15px;
+      background: #fff;
+      color: #111;
     }
 
     textarea {
-      min-height: 140px;
+      min-height: 160px;
       resize: vertical;
     }
 
-    .row {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
+    .multi {
+      min-height: 120px;
     }
 
     .hint {
       font-size: 13px;
       color: #666666;
       margin-top: 4px;
-    }
-
-    .multi {
-      min-height: 120px;
     }
 
     button {
@@ -75,17 +71,11 @@
       font-weight: 700;
       cursor: pointer;
       background: #111111;
-      color: white;
+      color: #ffffff;
     }
 
-    .preview {
-      margin-top: 16px;
-      padding: 12px;
-      border: 1px solid #dddddd;
-      border-radius: 12px;
-      background: #f7f7f7;
-      white-space: pre-wrap;
-      font-size: 14px;
+    button:hover {
+      opacity: 0.95;
     }
   </style>
 </head>
@@ -96,7 +86,7 @@
     <div class="field">
       <label for="type">Тип</label>
       <select id="type">
-        <option value="идея">идея</option>
+        <option value="идея" selected>идея</option>
         <option value="сцена">сцена</option>
         <option value="персонаж">персонаж</option>
         <option value="лор">лор</option>
@@ -170,10 +160,8 @@
     </div>
 
     <div class="field">
-      <button id="showDataBtn" type="button">Показать, что отправится</button>
+      <button id="sendBtn" type="button">Отправить в бот</button>
     </div>
-
-    <div id="preview" class="preview">Здесь появится итоговый JSON.</div>
   </div>
 
   <script>
@@ -182,7 +170,9 @@
     tg.expand()
 
     function getMultiValues(selectEl) {
-      return Array.from(selectEl.selectedOptions).map(option => option.value).filter(Boolean)
+      return Array.from(selectEl.selectedOptions)
+        .map(option => option.value)
+        .filter(Boolean)
     }
 
     function splitCommaList(value) {
@@ -192,21 +182,71 @@
         .filter(Boolean)
     }
 
-    document.getElementById('showDataBtn').addEventListener('click', () => {
-      const payload = {
-        source: 'telegram-miniapp',
-        type: document.getElementById('type').value,
-        status: document.getElementById('status').value,
-        block: document.getElementById('block').value,
-        newBlock: document.getElementById('newBlock').value.trim(),
-        focuses: getMultiValues(document.getElementById('focuses')),
-        newFocuses: splitCommaList(document.getElementById('newFocuses').value),
-        characters: getMultiValues(document.getElementById('characters')),
-        newCharacters: splitCommaList(document.getElementById('newCharacters').value),
+    function uniqueClean(list) {
+      return [...new Set(
+        list
+          .map(item => String(item || '').trim())
+          .filter(Boolean)
+      )]
+    }
+
+    function buildData() {
+      const selectedFocuses = getMultiValues(document.getElementById('focuses'))
+      const newFocuses = splitCommaList(document.getElementById('newFocuses').value)
+
+      const selectedCharacters = getMultiValues(document.getElementById('characters'))
+      const newCharacters = splitCommaList(document.getElementById('newCharacters').value)
+
+      const finalBlock =
+        document.getElementById('newBlock').value.trim() ||
+        document.getElementById('block').value.trim()
+
+      return {
+        type: document.getElementById('type').value.trim(),
+        status: document.getElementById('status').value.trim(),
+        block: finalBlock,
+        focuses: uniqueClean([...selectedFocuses, ...newFocuses]),
+        characters: uniqueClean([...selectedCharacters, ...newCharacters]),
         bodyText: document.getElementById('bodyText').value.trim()
       }
+    }
 
-      document.getElementById('preview').textContent = JSON.stringify(payload, null, 2)
+    function buildBotText(data) {
+      const lines = []
+
+      if (data.characters.length > 0) {
+        lines.push(`персонажи: ${data.characters.join(', ')}`)
+      }
+
+      if (data.block) {
+        lines.push(`блок: ${data.block}`)
+      }
+
+      if (data.focuses.length > 0) {
+        lines.push(`фокус: ${data.focuses.join(', ')}`)
+      }
+
+      if (data.status) {
+        lines.push(`статус: ${data.status}`)
+      }
+
+      lines.push(`${data.type}: ${data.bodyText}`)
+
+      return lines.join('\n')
+    }
+
+    document.getElementById('sendBtn').addEventListener('click', () => {
+      const data = buildData()
+
+      if (!data.bodyText) {
+        alert('Напиши текст заметки')
+        return
+      }
+
+      const botText = buildBotText(data)
+
+      tg.sendData(botText)
+      tg.close()
     })
   </script>
 </body>
