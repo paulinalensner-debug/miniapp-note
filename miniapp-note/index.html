@@ -77,6 +77,25 @@
     button:hover {
       opacity: 0.95;
     }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .ok {
+      color: #0a7a2f;
+    }
+
+    .err {
+      color: #b42318;
+    }
   </style>
 </head>
 <body>
@@ -160,14 +179,19 @@
     </div>
 
     <div class="field">
-      <button id="sendBtn" type="button">Отправить в бот</button>
+      <button id="sendBtn" type="button">Отправить</button>
+      <div id="statusText" class="status"></div>
     </div>
   </div>
 
   <script>
-    const tg = window.Telegram.WebApp
-    tg.ready()
-    tg.expand()
+    const tg = window.Telegram?.WebApp
+    if (tg) {
+      tg.ready()
+      tg.expand()
+    }
+
+    const WEBHOOK_URL = 'https://webhook.botpress.cloud/a6c0dbe4-08e3-492d-856e-0e7c52a5905c'
 
     function getMultiValues(selectEl) {
       return Array.from(selectEl.selectedOptions)
@@ -235,18 +259,57 @@
       return lines.join('\n')
     }
 
-    document.getElementById('sendBtn').addEventListener('click', () => {
+    async function sendToWebhook(botText) {
+      const response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          botText: botText
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+    }
+
+    document.getElementById('sendBtn').addEventListener('click', async () => {
+      const statusText = document.getElementById('statusText')
+      const sendBtn = document.getElementById('sendBtn')
+
+      statusText.textContent = ''
+      statusText.className = 'status'
+
       const data = buildData()
 
       if (!data.bodyText) {
-        alert('Напиши текст заметки')
+        statusText.textContent = 'Напиши текст заметки'
+        statusText.classList.add('err')
         return
       }
 
       const botText = buildBotText(data)
 
-      tg.sendData(botText)
-      tg.close()
+      try {
+        sendBtn.disabled = true
+        statusText.textContent = 'Отправляю...'
+
+        await sendToWebhook(botText)
+
+        statusText.textContent = 'Заметка отправлена'
+        statusText.classList.add('ok')
+
+        setTimeout(() => {
+          if (tg) tg.close()
+        }, 700)
+      } catch (error) {
+        statusText.textContent = 'Ошибка отправки: ' + error.message
+        statusText.classList.add('err')
+      } finally {
+        sendBtn.disabled = false
+      }
     })
   </script>
 </body>
