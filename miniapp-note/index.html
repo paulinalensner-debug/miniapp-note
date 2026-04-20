@@ -135,7 +135,6 @@
         <option value="Политика">Политика</option>
         <option value="Сцены">Сцены</option>
       </select>
-      <div class="hint">Пока это тестовый список.</div>
     </div>
 
     <div class="field">
@@ -208,9 +207,7 @@
 
     function uniqueClean(list) {
       return [...new Set(
-        list
-          .map(item => String(item || '').trim())
-          .filter(Boolean)
+        list.map(item => String(item || '').trim()).filter(Boolean)
       )]
     }
 
@@ -263,9 +260,11 @@
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'text/plain;charset=UTF-8'
+          'Content-Type': 'application/json'
         },
-        body: botText
+        body: JSON.stringify({
+          botText: botText
+        })
       })
 
       if (!response.ok) {
