@@ -1,4 +1,4 @@
-<!doctype html>
+=<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
@@ -190,8 +190,6 @@
       tg.expand()
     }
 
-    const WEBHOOK_URL = 'https://webhook.botpress.cloud/a6c0dbe4-08e3-492d-856e-0e7c52a5905c'
-
     function getMultiValues(selectEl) {
       return Array.from(selectEl.selectedOptions)
         .map(option => option.value)
@@ -256,30 +254,12 @@
       return lines.join('\n')
     }
 
-    async function sendToWebhook(botText) {
-      const response = await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          botText: botText
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
-      }
-    }
-
-    document.getElementById('sendBtn').addEventListener('click', async () => {
+    document.getElementById('sendBtn').addEventListener('click', () => {
       const statusText = document.getElementById('statusText')
-      const sendBtn = document.getElementById('sendBtn')
+      const data = buildData()
 
       statusText.textContent = ''
       statusText.className = 'status'
-
-      const data = buildData()
 
       if (!data.bodyText) {
         statusText.textContent = 'Напиши текст заметки'
@@ -290,22 +270,21 @@
       const botText = buildBotText(data)
 
       try {
-        sendBtn.disabled = true
-        statusText.textContent = 'Отправляю...'
+        if (!tg || typeof tg.sendData !== 'function') {
+          throw new Error('Telegram WebApp недоступен')
+        }
 
-        await sendToWebhook(botText)
+        tg.sendData(botText)
 
-        statusText.textContent = 'Заметка отправлена'
+        statusText.textContent = 'Данные отправлены в бот'
         statusText.classList.add('ok')
 
         setTimeout(() => {
-          if (tg) tg.close()
-        }, 700)
+          tg.close()
+        }, 500)
       } catch (error) {
         statusText.textContent = 'Ошибка отправки: ' + error.message
         statusText.classList.add('err')
-      } finally {
-        sendBtn.disabled = false
       }
     })
   </script>
